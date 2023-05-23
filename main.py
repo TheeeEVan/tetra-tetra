@@ -53,7 +53,9 @@ WHITE = (255, 255, 255)
 screen = pygame.display.set_mode((config["screen_width"], config["screen_height"]))
 clock = pygame.time.Clock()
 last_dt = 0
-drop_speed = 1000
+level_drop_speed = 1000
+soft_drop_speed = 20
+drop_speed = level_drop_speed
 score = 0
 
 # create game object
@@ -84,11 +86,6 @@ while running:
     screen.fill(BG)
     last_dt += dt
 
-    # every second drop
-    #if last_dt >= drop_speed:
-    #   game.fall()
-    #   last_dt = 0
-
     # CONTROLS
     for event in pygame.event.get():
         if event.type == pygame.QUIT:
@@ -101,18 +98,22 @@ while running:
                 print("right")
                 game.right()
             if event.key == config["controls"]["rotate_cw"]:
+                game.rotate_cw()
                 print("rotate_cw")
             if event.key == config["controls"]["rotate_ccw"]:
+                game.rotate_ccw()
                 print("rotate_ccw")
             if event.key == config["controls"]["rotate_180"]:
+                game.rotate_180()
                 print("rotate_180")
             if event.key == config["controls"]["hard_drop"]:
                 print("hard_drop")
                 game.drop()
             if event.key == config["controls"]["soft_drop"]:
                 print("soft_drop")
-                drop_speed /= 10
+                drop_speed = soft_drop_speed
             if event.key == config["controls"]["hold"]:
+                game.hold_piece()
                 print("hold")
         if event.type == pygame.KEYUP:
             if event.key == config["controls"]["left"]:
@@ -121,17 +122,16 @@ while running:
                 print("right up")
             if event.key == config["controls"]["soft_drop"]:
                 print("soft_drop up")
-                drop_speed *= 20
+                drop_speed = level_drop_speed
 
     # DRAW
     # draw the grid
     game.draw()
 
-    # draw all pieces
-    #for row in range(22):
-    #    for cell in range(10):
-    #        if game.grid[row][cell][0] > 0:
-    #            screen.blit(piece_sprites[game.grid[row][cell][0]], (cell*30+355, (19-row)*30+105))
+    # every second drop
+    if last_dt >= drop_speed:
+       game.fall()
+       last_dt = 0
 
     # draw nexts
     #for row in range(14):

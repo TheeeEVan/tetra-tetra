@@ -75,12 +75,23 @@ class Game:
 
 
         # generate first two bags
-        next_pieces = self.generate_bag() + self.generate_bag()
+        self.next_pieces = self.generate_bag() + self.generate_bag()
+        # increments everytime piece spawns, once 7 pieces add another bag
+        self.spawns = 0
 
-        current_piece = self.pieces[next_pieces.pop(0) - 1]
-        current_x = 3
-        current_y = 21
+        self.current_piece = 0
+        self.current_id = 0
 
+        self.spawn_piece(self.next_pieces.pop(0))
+
+        self.current_x = 3
+        self.current_y = 21
+        
+        self.current_rotation = 0
+        self.temp_rotation = 0
+
+        # stores id of held piece
+        self.hold_id = 0
     # draws the game
     def draw(self):
         # draws grid
@@ -98,10 +109,198 @@ class Game:
                     # draw correct piece
                     self.screen.blit(self.piece_sprites[self.board[row][cell]], (cell*30+355, (19-row)*30+105))
 
+        # draw falling piece
+        for row in range(len(self.current_piece)):
+            for cell in range(len(self.current_piece[0])):
+                if self.current_piece[row][cell] > 0:
+                    self.screen.blit(self.piece_sprites[self.current_id], ((cell + self.current_x)*30+355, (19-(self.current_y - row))*30+105))
+
+        # draw next pieces
+
     # generates next piece bag
     def generate_bag(self):
         pieces = [1, 2, 3, 4, 5, 6, 7]
         random.shuffle(pieces)
         return pieces
     
+    def can_spawn(self, piece):
+        test_piece = self.pieces[piece - 1]
+
+        for y in range(len(test_piece)):
+            for x in range(len(test_piece[y])):
+                if test_piece[y][x] > 0:
+                    if self.board[21- y][3 + x] != 0:
+                        return False
+        return True
+    
+    # spawns specified piece
     def spawn_piece(self, piece):
+        if self.can_spawn(piece):
+            # add one to spawns
+            self.spawns += 1
+
+            # if seven pieces have spawned generate next bag
+            if self.spawns == 7:
+                self.next_pieces += self.generate_bag()
+                self.spawns = 0
+
+            # set currnet x and y to spawn
+            self.current_x = 3
+            self.current_y = 21
+            # set piece to new piece
+            self.current_piece = self.pieces[piece - 1]
+            self.current_id = piece
+        else:
+            # TODO: SWITCH TO GAMEOVER OR SOMETHING LIKE THAT
+            pygame.event.post(pygame.event.Event(pygame.QUIT))
+
+    # add piece to board to lock in place
+    def lock_piece(self):
+        # go through all parts of the piece
+        for y in range(len(self.current_piece)):
+            for x in range(len(self.current_piece[y])):
+                # if part of the piece
+                if self.current_piece[y][x] > 0:
+                    # add to board using current id
+                    self.board[self.current_y - y][self.current_x + x] = self.current_id
+        
+        # clear lines
+        for line in range(39, -1, -1):
+            if 0 not in self.board[line]:
+                for i in range(line, 39):
+                    self.board[i] = self.board[i + 1]
+                    self.board[i + 1] = [0,0,0,0,0,0,0,0,0,0]
+
+    # returns bool stating whether the current piece can fall again
+    def can_fall(self):
+        # go through all parts of the piece
+        for y in range(len(self.current_piece)):
+            for x in range(len(self.current_piece[y])):
+                # if part of the piece
+                if self.current_piece[y][x] > 0:
+                    # check if there is blocks below it or if it is at the bottom of the board
+                    if self.board[self.current_y - y - 1][self.current_x + x] > 0 or self.current_y - y < 1:
+                        return False
+        return True
+
+    # causes a piece to fall one row
+    def fall(self):
+        if self.can_fall():
+            self.current_y -= 1
+        else:
+            self.lock_piece()
+            self.spawn_piece(self.next_pieces.pop(0))
+    
+    # drops a piece instantly
+    def drop(self):
+        # continue falling until piece hits something and lock
+        while self.can_fall():
+            self.fall()
+        self.lock_piece()
+        self.spawn_piece(self.next_pieces.pop(0))
+    
+    # move piece one left
+    def left(self):
+        for y in range(len(self.current_piece)):
+            for x in range(len(self.current_piece[y])):
+                # if part of the piece
+                if self.current_piece[y][x] > 0:
+                    # check if there is blocks below it or if it is at the bottom of the board
+                    if self.board[self.current_y - y][self.current_x + x - 1] > 0 or self.current_x + x < 1:
+                        return
+        self.current_x -= 1
+                    
+    # move piece one left
+    def right(self):
+        for y in range(len(self.current_piece)):
+            for x in range(len(self.current_piece[y])):
+                # if part of the piece
+                if self.current_piece[y][x] > 0:
+                    # check if there is blocks below it or if it is at the bottom of the board
+                    try:
+                        if self.board[self.current_y - y][self.current_x + x + 1] > 0:
+                            return
+                    except:
+                        return
+        self.current_x += 1
+
+    def intersecting(self, temp_x, temp_y):
+        # check if in bounds
+        for y in range(len(self.current_piece)):
+            for x in range(len(self.current_piece[y])):
+                # if part of the piece
+                if self.current_piece[y][x] > 0:
+                    # check if there is blocks below it or if it is at the bottom of the board
+                    if temp_y - y < 0 or temp_x + x < 0 or temp_x + x > 9:
+                            return True
+                    
+        # check if intersects with piece
+        for y in range(len(self.current_piece)):
+            for x in range(len(self.current_piece[y])):
+                # if part of the piece
+                if self.current_piece[y][x] > 0:
+                    # check if there is blocks below it or if it is at the bottom of the board
+                    if self.board[self.current_y - y][self.current_x + x] > 0:
+                        return True
+        
+        return False
+    
+    # wall kicks
+    def valid_rotate(self):
+        temp_x = self.current_x
+        temp_y = self.current_y
+
+        if self.intersecting(temp_x, temp_y):
+            
+
+    # rotate clockwise
+    def rotate_cw(self):
+        # squares dont rotate and i did some weird stuff with squares
+        if self.current_id != 2:
+            temp_piece = []
+            for i in range(len(self.current_piece[0])):
+                temp_piece.append([])
+                for j in range(len(self.current_piece) - 1, -1, -1):
+                    temp_piece[i].append(self.current_piece[j][i])
+            self.current_piece = temp_piece
+        
+        if not self.valid_rotate():
+            self.rotate_ccw()
+
+    # rotate counter clockwise
+    def rotate_ccw(self):
+        # squares dont rotate and i did some weird stuff with squares
+        if self.current_id != 2:
+            temp_piece = []
+            for i in range(len(self.current_piece[0]) - 1, -1, -1):
+                temp_row = []
+                for j in range(len(self.current_piece)):
+                    temp_row.append(self.current_piece[j][i])
+                temp_piece.append(temp_row)
+            self.current_piece = temp_piece
+
+        if not self.valid_rotate():
+            self.rotate_cw()
+
+    # rotate 180
+    def rotate_180(self):
+        if self.current_id != 2:
+            temp_piece = []
+            for i in range(len(self.current_piece) - 1, -1, -1):
+                temp_row = []
+                for j in range(len(self.current_piece) - 1, -1, -1):
+                    temp_row.append(self.current_piece[i][j])
+                temp_piece.append(temp_row)
+            self.current_piece = temp_piece
+
+        if not self.valid_rotate():
+            self.rotate_180()
+
+    def hold_piece(self):
+        new_piece = self.hold_id
+        self.hold_id = self.current_id
+        if new_piece > 0:
+            self.spawn_piece(new_piece)
+        else:
+            self.spawn_piece(self.next_pieces.pop(0))
+
