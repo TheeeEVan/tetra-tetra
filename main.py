@@ -26,9 +26,9 @@ config = {
 
 # FONTS
 font_fps = pygame.font.Font('freesansbold.ttf', 15)
-text_font = pygame.font.Font('fonts/Rubik-VariableFont_wght.ttf', 30)
+text_font = pygame.font.Font('assets/fonts/Rubik-VariableFont_wght.ttf', 30)
 text_font.bold = True
-
+score_font = pygame.font.Font('assets/fonts/VT323-Regular.ttf', 50)
 
 # COLORS
 BG = (20, 20, 20)
@@ -47,7 +47,6 @@ WHITE = (255, 255, 255)
 # 5 - red
 # 6 - blue
 # 7 - orange
-piece_sprites = [None, pygame.image.load("assets/pieces/cyan.png"), pygame.image.load("assets/pieces/yellow.png"), pygame.image.load("assets/pieces/purple.png"), pygame.image.load("assets/pieces/green.png"), pygame.image.load("assets/pieces/red.png"), pygame.image.load("assets/pieces/blue.png"), pygame.image.load("assets/pieces/orange.png"), ]
 
 
 # setup screen
@@ -55,9 +54,14 @@ screen = pygame.display.set_mode((config["screen_width"], config["screen_height"
 clock = pygame.time.Clock()
 last_dt = 0
 drop_speed = 1000
+score = 0
 
 # create game object
-game = Game()
+game = Game(screen)
+
+# all pre rendered text
+next_text = text_font.render("NEXT", True, WHITE)
+hold_text = text_font.render("HOLD", True, WHITE)
 
 # fps counter
 def fps_counter():
@@ -73,14 +77,17 @@ running = True
 while running:
     # limit to 60 fps and assign deltatime
     dt = clock.tick(60)
+
+    score += 1
+
     # empty screen
     screen.fill(BG)
     last_dt += dt
 
     # every second drop
-    if last_dt >= drop_speed:
-        game.fall()
-        last_dt = 0
+    #if last_dt >= drop_speed:
+    #   game.fall()
+    #   last_dt = 0
 
     # CONTROLS
     for event in pygame.event.get():
@@ -114,27 +121,34 @@ while running:
                 print("right up")
             if event.key == config["controls"]["soft_drop"]:
                 print("soft_drop up")
-                drop_speed *= 10
+                drop_speed *= 20
 
     # DRAW
     # draw the grid
-    screen.blit(game.grid_sprite, (350, 100))
+    game.draw()
 
     # draw all pieces
-    for row in range(22):
-        for cell in range(10):
-            if game.grid[row][cell][0] > 0:
-                screen.blit(piece_sprites[game.grid[row][cell][0]], (cell*30+355, (19-row)*30+105))
+    #for row in range(22):
+    #    for cell in range(10):
+    #        if game.grid[row][cell][0] > 0:
+    #            screen.blit(piece_sprites[game.grid[row][cell][0]], (cell*30+355, (19-row)*30+105))
 
     # draw nexts
-    for row in range(14):
-        for cell in range(4):
-            if game.next_grid[row][cell] > 0:
-                screen.blit(piece_sprites[game.next_grid[row][cell]], (cell*30+750, row*30+105))
+    #for row in range(14):
+    #    for cell in range(4):
+    #        if game.next_grid[row][cell] > 0:
+    #            screen.blit(piece_sprites[game.next_grid[row][cell]], (cell*30+750, row*30+105))
 
-    # all text
-    next_text = text_font.render("NEXT", True, WHITE)
+    # title text
     screen.blit(next_text, (750, 40))
+    screen.blit(hold_text, (200, 40))
+
+    # score text
+    score_text = score_font.render(str(score), True, WHITE)
+    score_rect = score_text.get_rect()
+    score_rect.center = (500, 750)
+    screen.blit(score_text, score_rect)
+    
 
     # check if fps counter is turned on
     if config["fps_counter"]:
