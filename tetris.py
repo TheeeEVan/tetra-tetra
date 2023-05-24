@@ -40,9 +40,11 @@ def tetris(config, mode):
     # clock
     clock = pygame.time.Clock()
     # timers
+    time_running = 0
     last_dt = 0
     lock_delay = 0
     move_reset = 0
+    hard_drop_enabled_time = 0
     # score
     score = 0
     lines = 0
@@ -57,6 +59,7 @@ def tetris(config, mode):
     last_down = 0
     moving_left = False
     moving_right = False
+    hard_drop_enabled = True
 
     # already held
     held = False
@@ -67,7 +70,7 @@ def tetris(config, mode):
     # all pre rendered text
     next_text = text_font.render("NEXT", True, WHITE)
     hold_text = text_font.render("HOLD", True, WHITE)
-    title_text = title_font.render("TETRA TETRA", True, WHITE)
+    title_text = title_font.render("TETRIS", True, WHITE)
     title_rect = title_text.get_rect()
     title_rect.center = (500, 20)
     gameover_text = text_font.render("GAMEOVER", True, WHITE)
@@ -94,6 +97,9 @@ def tetris(config, mode):
         # empty screen
         screen.fill(BG)
 
+        if not gameover:
+            time_running += dt
+
         # add to time since last fall
         last_dt += dt
 
@@ -108,10 +114,17 @@ def tetris(config, mode):
             arr_time += dt
 
         if gameover:
-            gameover_time += das_time
+            gameover_time += dt
 
         if gameover_time > 3000:
             running = False
+        
+        if hard_drop_enabled == False:
+            hard_drop_enabled_time += dt
+
+        if hard_drop_enabled_time > 100:
+            hard_drop_enabled = True
+            hard_drop_enabled_time = 0
 
         # CONTROLS AND SCORING
         for event in pygame.event.get():
@@ -151,9 +164,10 @@ def tetris(config, mode):
                             lock_delay = 0
                             move_reset += 1
                     elif event.key == config["controls"]["hard_drop"]:
-                        game.drop()
-                        held = False
-                        das_time = config["handling"]["DAS"] - config["handling"]["DCD"]
+                        if hard_drop_enabled:
+                            game.drop()
+                            held = False
+                            das_time = config["handling"]["DAS"] - config["handling"]["DCD"]
                     elif event.key == config["controls"]["soft_drop"]:
                         if config["handling"]["SDF"] == 0:
                             game.drop_soft()
@@ -181,47 +195,61 @@ def tetris(config, mode):
                             drop_speed *= config["handling"]["SDF"]
                         soft_drop = False
                 # SCORING EVENTS
-                elif event.type == SINGLE_LINE:
-                    score += 100 * (level + 1)
-                elif event.type == DOUBLE_LINE:
-                    score += 300 * (level + 1)
-                elif event.type == TRIPLE_LINE:
-                    score += 500 * (level + 1)
-                elif event.type == TETRIS_LINE:
-                    score += 800 * (level + 1)
-                elif event.type == SPIN:
-                    score += 400 * (level + 1)
-                elif event.type == SINGLE_SPIN:
-                    score += 800 * (level + 1)
-                elif event.type == DOUBLE_SPIN:
-                    score += 1200 * (level + 1)
-                elif event.type == TRIPLE_SPIN:
-                    score += 1600 * (level + 1)
-                elif event.type == SINGLE_CLEAR:
-                    score += 800 * (level + 1)
-                elif event.type == DOUBLE_CLEAR:
-                    score += 1200 * (level + 1)
-                elif event.type == TRIPLE_CLEAR:
-                    score += 1800 * (level + 1)
-                elif event.type == TETRIS_CLEAR:
-                    score += 2000 * (level + 1)
-                elif event.type == SOFT_DROP_LINE:
-                    score += 1
-                elif event.type == HARD_DROP_LINE:
-                    score += 2
-                elif event.type == LINE:
-                    lines += 1
-                    level = math.floor(lines / 10)
-                    drop_speed = speeds[level] / 60 * 1000
+                if mode == 0:
+                    if event.type == SINGLE_LINE:
+                        score += 100 * (level + 1)
+                    elif event.type == DOUBLE_LINE:
+                        score += 300 * (level + 1)
+                    elif event.type == TRIPLE_LINE:
+                        score += 500 * (level + 1)
+                    elif event.type == TETRIS_LINE:
+                        score += 800 * (level + 1)
+                    elif event.type == SPIN:
+                        score += 400 * (level + 1)
+                    elif event.type == SINGLE_SPIN:
+                        score += 800 * (level + 1)
+                    elif event.type == DOUBLE_SPIN:
+                        score += 1200 * (level + 1)
+                    elif event.type == TRIPLE_SPIN:
+                        score += 1600 * (level + 1)
+                    elif event.type == SINGLE_CLEAR:
+                        score += 800 * (level + 1)
+                    elif event.type == DOUBLE_CLEAR:
+                        score += 1200 * (level + 1)
+                    elif event.type == TRIPLE_CLEAR:
+                        score += 1800 * (level + 1)
+                    elif event.type == TETRIS_CLEAR:
+                        score += 2000 * (level + 1)
+                    elif event.type == SOFT_DROP_LINE:
+                        score += 1
+                    elif event.type == HARD_DROP_LINE:
+                        score += 2
+                    elif event.type == LINE:
+                        lines += 1
+                        level = math.floor(lines / 10)
+                        drop_speed = speeds[level] / 60 * 1000
+                if mode == 1:
+                    if event.type == LINE:
+                        lines += 1
+                        score += 1
+                        level = math.floor(lines / 10)
+                        drop_speed = speeds[level] / 60 * 1000
+                if mode == 2:
+                    if event.type == LINE:
+                        lines += 1
+                        level = math.floor(lines / 10)
+                        score = level
+                        drop_speed = speeds[level] / 60 * 1000
                 elif event.type == GAMEOVER:
                     gameover = True
+                    running = False
 
         if soft_drop and config['handling']['SDF'] == 0:
             game.drop_soft()
 
         # drop according to drop_speed
         if last_dt >= drop_speed:
-            if soft_drop:
+            if soft_drop and mode == "0":
                 score += 1
             game.fall()
             last_dt = 0
@@ -249,6 +277,7 @@ def tetris(config, mode):
 
         # lock piece if over lock delay
         if lock_delay >= 500:
+            hard_drop_enabled = False
             game.lock_piece()
             held = 0
             das_time = config["handling"]["DAS"] - config["handling"]["DCD"]
@@ -256,6 +285,7 @@ def tetris(config, mode):
             lock_delay = 0
         # if over move reset and cant fall lock right away
         elif move_reset == 15 and not game.can_fall():
+            hard_drop_enabled = False
             game.lock_piece()
             held = 0
             das_time = config["handling"]["DAS"] - config["handling"]["DCD"]
@@ -277,9 +307,9 @@ def tetris(config, mode):
         # draw the grid
         game.draw()
 
-        # gameover text
-        if gameover:
-            screen.blit(gameover_text, gameover_rect)
+        if mode == 1 and score >= 40:
+            gameover = True
+            running = False
 
         # check if fps counter is turned on
         if config["fps_counter"]:
@@ -287,4 +317,17 @@ def tetris(config, mode):
         # update display
         pygame.display.update()
 
-    return score
+        # gameover text
+        if gameover:
+            pygame.quit()
+
+    pygame.quit()
+    if mode == 0:
+        return score
+    if mode == 1:
+        if score >= 40:
+            return time_running
+        else:
+            return 0
+    if mode == 2:
+        return level

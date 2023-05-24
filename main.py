@@ -3,6 +3,7 @@ import chalk
 import pygame
 import os
 import json
+import time
 
 pygame.init()
 
@@ -29,7 +30,9 @@ default_config = {
         }
     },
     "user": {
-        "highscore": 0
+        "blitz_highscore": 0,
+        "lines_highscore": 0,
+        "zen_highscore": 0
     }
 }
 
@@ -41,9 +44,12 @@ white = chalk.Chalk("white")
 if not os.path.isfile("./config.json"):
     config_file = open("config.json", "w")
     config_file.write(json.dumps(default_config))
+    config_file.close()
     
-config_raw = open("config.json", "r").read()
+config_file = open("config.json", "r")
+config_raw = config_file.read()
 config = json.loads(config_raw)
+config_file.close()
 
 def clear():
     # checks for os and sends appropriate clear command
@@ -65,21 +71,25 @@ if __name__ == "__main__":
     |_|  |______|  |_|  |_|  \_\_____|_____/\n\n'''))
         
         print(chalk.bold(f"WELCOME!"))
-        print(chalk.bold("(1) ") + yellow("Blitz", bold=True))
-        print(chalk.bold("(2) ") + red("40 Lines", bold=True))
-        print(chalk.bold("(3) ") + magenta("Zen", bold=True))
+        print(chalk.bold("(1) ") + yellow("Blitz", bold=True) + " - Highscore: " + str(config["user"]["blitz_highscore"]))
+        print(chalk.bold("(2) ") + red("40 Lines", bold=True) + " - Highscore: " + str(config["user"]["lines_highscore"]) + 's')
+        print(chalk.bold("(3) ") + magenta("Zen", bold=True) + " - Highscore: Level " + str(config["user"]["zen_highscore"]))
         print(chalk.bold("(4) ") + white("Settings", bold=True))
         choice = input("? ")
-        
+        time.sleep(1)
         if choice.isnumeric():
             if int(choice) > 0 and int(choice) < 5:
                 if int(choice) == 1:
                     score = tetris.tetris(config["game"], 0)
+                    if score > config['user']['blitz_highscore']:
+                        config['user']['blitz_highscore'] = score
                 if int(choice) == 2:
-                    time = tetris.tetris(config["game"], 1)
+                    lines_time = tetris.tetris(config["game"], 1)
+                    if lines_time != 0 and (lines_time < config['user']['lines_highscore'] or config['user']['lines_highscore'] == 0):
+                        config['user']['lines_highscore'] = lines_time
                 if int(choice) == 3:
                     tetris.tetris(config["game"], 2)
-
-        if score > config['user']['highscore']:
-            config['user']['highscore'] = score
-            open("config.json", "w").write(json.dumps(config))
+            config_raw = json.dumps(config)
+            config_file = open("config.json", "w")
+            config_file.write(config_raw)
+            config_file.close()
