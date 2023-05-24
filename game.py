@@ -227,8 +227,7 @@ class Game:
             self.current_id = piece
             self.current_rotation = 0
         else:
-            # TODO: SWITCH TO GAMEOVER OR SOMETHING LIKE THAT
-            pygame.event.post(pygame.event.Event(pygame.QUIT))
+            pygame.event.post(EVENT_GAMEOVER)
 
     # add piece to board to lock in place
     def lock_piece(self):
