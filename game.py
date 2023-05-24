@@ -73,6 +73,39 @@ class Game:
             ]
         ]
 
+        # these are the offsets for the center rotation point that the rotation system will attempt before cancelling rotation
+        # [90 or 180][I or non-I (only for 90)][(original rotation, desired rotation)]
+        self.kick_table = {
+            "90": {
+                "non-I": {
+                    (0, 1): [(-1, 0), (-1, 1), (0, -2), (-1, -2)],
+                    (1, 0): [(1, 0), (1, -1), (0, 2), (1, 2)],
+                    (1, 2): [(1, 0), (1, -1), (0, 2), (1, 2)],
+                    (2, 1): [(-1, 0), (-1, 1), (0, -2), (-1, -2)],
+                    (2, 3): [(1, 0), (1, 1), (0, -2), (1, -2)],
+                    (3, 2): [(-1, 0), (-1, -1), (0, 2), (-1, 2)],
+                    (3, 0): [(-1, 0), (-1, -1), (0, 2), (-1, 2)],
+                    (0, 3): [(1, 0), (1, 1), (0, -2), (1, -2)]
+                },
+
+                "I": {
+                    (0, 1): [(-2, 0), (1, 0), (-2, -1), (1, 2)],
+                    (1, 0): [(2, 0), (-1, 0), (2, 1), (-1, -2)],
+                    (1, 2): [(-1, 0), (2, 0), (-1, 2), (2, -1)],
+                    (2, 1): [(1, 0), (-2, 0), (1, -2), (-2, 1)],
+                    (2, 3): [(2, 0), (-1, 0), (2, 1), (-1, -2)],
+                    (3, 2): [(-2, 0), (1, 0), (-2, -1), (1, 2)],
+                    (3, 0): [(1, 0), (-2, 0), (1, -2), (-2, 1)],
+                    (0, 3): [(-1, 0), (2, 0), (-1, 2), (2, -1)]
+                }
+            },
+            "180": {
+                (0, 2): [(0, 1), (1, 1), (-1, 1), (1, 0), (-1, 0)],
+                (2, 0): [(0, -1), (-1, -1), (1, -1), (-1, 0), (1, 0)],
+                (1, 3): [(1, 0), (1, 2), (1, 1), (0, 2), (0, 1)],
+                (3, 1): [(-1, 0), (-1, 2), (-1, 1), (0, 2), (0, 1)]
+            }
+        }
 
         # generate first two bags
         self.next_pieces = self.generate_bag() + self.generate_bag()
@@ -150,6 +183,7 @@ class Game:
             # set piece to new piece
             self.current_piece = self.pieces[piece - 1]
             self.current_id = piece
+            self.current_rotation = 0
         else:
             # TODO: SWITCH TO GAMEOVER OR SOMETHING LIKE THAT
             pygame.event.post(pygame.event.Event(pygame.QUIT))
@@ -240,21 +274,54 @@ class Game:
                 # if part of the piece
                 if self.current_piece[y][x] > 0:
                     # check if there is blocks below it or if it is at the bottom of the board
-                    if self.board[self.current_y - y][self.current_x + x] > 0:
+                    if self.board[temp_y - y][temp_x + x] > 0:
                         return True
         
         return False
     
     # wall kicks
-    def valid_rotate(self):
-        temp_x = self.current_x
-        temp_y = self.current_y
+    # rotation - 0 = 90 - 1 = 180
+    def valid_rotate(self, rotation):
+        if self.intersecting(self.current_x, self.current_y):
+            if rotation == 0:
+                if self.current_id == 1:
+                    for mods in self.kick_table['90']['I'][(self.current_rotation, self.temp_rotation)]:
+                        mod_x, mod_y = mods
 
-        if self.intersecting(temp_x, temp_y):
-            
+                        if not self.intersecting(self.current_x + mod_x, self.current_y + mod_y):
+                            self.current_x += mod_x
+                            self.current_y += mod_y
+                            self.current_rotation = self.temp_rotation
+                            return True
+                else:
+                    for mods in self.kick_table['90']['non-I'][(self.current_rotation, self.temp_rotation)]:
+                        mod_x, mod_y = mods
+
+                        if not self.intersecting(self.current_x + mod_x, self.current_y + mod_y):
+                            self.current_x += mod_x
+                            self.current_y += mod_y
+                            self.current_rotation = self.temp_rotation
+                            return True
+            else:
+                for mods in self.kick_table['180'][(self.current_rotation, self.temp_rotation)]:
+                    mod_x, mod_y = mods
+
+                    if not self.intersecting(self.current_x + mod_x, self.current_y + mod_y):
+                        self.current_x += mod_x
+                        self.current_y += mod_y
+                        self.current_rotation = self.temp_rotation
+                        return True
+        else:
+            self.current_rotation = self.temp_rotation
+            return True
 
     # rotate clockwise
     def rotate_cw(self):
+        self.temp_rotation = self.current_rotation + 1
+
+        if self.temp_rotation == 4:
+            self.temp_rotation = 0
+
         # squares dont rotate and i did some weird stuff with squares
         if self.current_id != 2:
             temp_piece = []
@@ -264,11 +331,16 @@ class Game:
                     temp_piece[i].append(self.current_piece[j][i])
             self.current_piece = temp_piece
         
-        if not self.valid_rotate():
-            self.rotate_ccw()
+            if not self.valid_rotate(0):
+                self.rotate_ccw()
 
     # rotate counter clockwise
     def rotate_ccw(self):
+        self.temp_rotation = self.current_rotation - 1
+
+        if self.temp_rotation == -1:
+            self.temp_rotation = 3
+
         # squares dont rotate and i did some weird stuff with squares
         if self.current_id != 2:
             temp_piece = []
@@ -279,11 +351,18 @@ class Game:
                 temp_piece.append(temp_row)
             self.current_piece = temp_piece
 
-        if not self.valid_rotate():
-            self.rotate_cw()
+            if not self.valid_rotate(0):
+                self.rotate_cw()
 
     # rotate 180
     def rotate_180(self):
+        self.temp_rotation = self.current_rotation + 2
+
+        if self.temp_rotation == 4:
+            self.temp_rotation = 0
+        elif self.temp_rotation == 5:
+            self.temp_rotation = 1
+
         if self.current_id != 2:
             temp_piece = []
             for i in range(len(self.current_piece) - 1, -1, -1):
@@ -293,7 +372,7 @@ class Game:
                 temp_piece.append(temp_row)
             self.current_piece = temp_piece
 
-        if not self.valid_rotate():
+        if not self.valid_rotate(1):
             self.rotate_180()
 
     def hold_piece(self):
