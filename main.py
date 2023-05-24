@@ -1,5 +1,6 @@
 import pygame
 import math
+from events import *
 from game import Game
 from enum import Enum
 
@@ -21,6 +22,12 @@ config = {
         "hard_drop": pygame.K_SPACE,
         "soft_drop": pygame.K_DOWN,
         "hold": pygame.K_LSHIFT
+    },
+    "handling": {
+        "DAS": 133,
+        "ARR": 0,
+        "DCD": 100,
+        "SDF": 0
     }
 }
 
@@ -38,6 +45,9 @@ GREEN = (0, 255, 0)
 BLUE = (0, 0, 255)
 WHITE = (255, 255, 255)
 
+# LEVEL SPEEDS (frames per row) - based off gameboy tetris
+speeds = [53, 49, 45, 41, 37, 33, 28, 22, 17, 11, 10, 9, 8, 7, 6, 6, 5, 5, 4, 4, 3]
+
 # PIECES
 # first one is none so we dont have to subtract one from piece id 
 # 1 - cyan
@@ -51,12 +61,29 @@ WHITE = (255, 255, 255)
 
 # setup screen
 screen = pygame.display.set_mode((config["screen_width"], config["screen_height"]))
+# clock
 clock = pygame.time.Clock()
+# timers
 last_dt = 0
-level_drop_speed = 1000
-soft_drop_speed = 20
-drop_speed = level_drop_speed
+lock_delay = 0
+move_reset = 0
+# score
 score = 0
+lines = 0
+level = 0
+# speeds
+drop_speed = speeds[level] / 60 * 1000
+soft_drop = False
+
+# handling
+das_time = 0
+arr_time = 0
+last_down = 0
+moving_left = False
+moving_right = False
+
+# already held
+held = False
 
 # create game object
 game = Game(screen)
@@ -80,64 +107,167 @@ while running:
     # limit to 60 fps and assign deltatime
     dt = clock.tick(60)
 
-    score += 1
-
     # empty screen
     screen.fill(BG)
+
+    # add to time since last fall
     last_dt += dt
 
-    # CONTROLS
+    # if piece cannot fall add to lock_delay
+    if not game.can_fall():
+        lock_delay += dt
+    
+    if last_down:
+        das_time += dt
+
+    if moving_left or moving_right:
+        arr_time += dt
+
+    # CONTROLS AND SCORING
     for event in pygame.event.get():
         if event.type == pygame.QUIT:
             running = False
-        if event.type == pygame.KEYDOWN:
+        elif event.type == pygame.KEYDOWN:
             if event.key == config["controls"]["left"]:
-                print("left")
+                moving_right = False
+                das_time = 0
                 game.left()
-            if event.key == config["controls"]["right"]:
-                print("right")
+                last_down = 1
+                if move_reset < 15 and not game.can_fall():
+                    lock_delay = 0
+                    move_reset += 1
+            elif event.key == config["controls"]["right"]:
+                moving_left = False
+                das_time = 0
                 game.right()
-            if event.key == config["controls"]["rotate_cw"]:
+                last_down = 2
+                if move_reset < 15 and not game.can_fall():
+                    lock_delay = 0
+                    move_reset += 1
+            elif event.key == config["controls"]["rotate_cw"]:
                 game.rotate_cw()
-                print("rotate_cw")
-            if event.key == config["controls"]["rotate_ccw"]:
+                if move_reset < 15 and not game.can_fall():
+                    lock_delay = 0
+                    move_reset += 1
+            elif event.key == config["controls"]["rotate_ccw"]:
                 game.rotate_ccw()
-                print("rotate_ccw")
-            if event.key == config["controls"]["rotate_180"]:
+                if move_reset < 15 and not game.can_fall():
+                    lock_delay = 0
+                    move_reset += 1
+            elif event.key == config["controls"]["rotate_180"]:
                 game.rotate_180()
-                print("rotate_180")
-            if event.key == config["controls"]["hard_drop"]:
-                print("hard_drop")
+                if move_reset < 15 and not game.can_fall():
+                    lock_delay = 0
+                    move_reset += 1
+            elif event.key == config["controls"]["hard_drop"]:
                 game.drop()
-            if event.key == config["controls"]["soft_drop"]:
-                print("soft_drop")
-                drop_speed = soft_drop_speed
-            if event.key == config["controls"]["hold"]:
-                game.hold_piece()
-                print("hold")
-        if event.type == pygame.KEYUP:
+                held = False
+                das_time = config["handling"]["DAS"] - config["handling"]["DCD"]
+            elif event.key == config["controls"]["soft_drop"]:
+                if config["handling"]["SDF"] == 0:
+                    game.drop_soft()
+                    soft_drop = True
+                else:
+                    soft_drop = True
+                    drop_speed /= config["handling"]["SDF"]
+            elif event.key == config["controls"]["hold"]:
+                if not held:
+                    game.hold_piece()
+                    held = True
+                    lock_delay = 0
+                    move_reset = 0
+        elif event.type == pygame.KEYUP:
             if event.key == config["controls"]["left"]:
-                print("left up")
-            if event.key == config["controls"]["right"]:
-                print("right up")
-            if event.key == config["controls"]["soft_drop"]:
-                print("soft_drop up")
-                drop_speed = level_drop_speed
+                last_down = 0
+                moving_left = False
+                das_time = 0
+            elif event.key == config["controls"]["right"]:
+                last_down = 0
+                moving_right = False
+                das_time = 0
+            elif event.key == config["controls"]["soft_drop"]:
+                if config["handling"]["SDF"] != 0:
+                    drop_speed *= config["handling"]["SDF"]
+                soft_drop = False
+        # SCORING EVENTS
+        elif event.type == SINGLE_LINE:
+            score += 100 * (level + 1)
+        elif event.type == DOUBLE_LINE:
+            score += 300 * (level + 1)
+        elif event.type == TRIPLE_LINE:
+            score += 500 * (level + 1)
+        elif event.type == TETRIS_LINE:
+            score += 800 * (level + 1)
+        elif event.type == SPIN:
+            score += 400 * (level + 1)
+        elif event.type == SINGLE_SPIN:
+            score += 800 * (level + 1)
+        elif event.type == DOUBLE_SPIN:
+            score += 1200 * (level + 1)
+        elif event.type == TRIPLE_SPIN:
+            score += 1600 * (level + 1)
+        elif event.type == SINGLE_CLEAR:
+            score += 800 * (level + 1)
+        elif event.type == DOUBLE_CLEAR:
+            score += 1200 * (level + 1)
+        elif event.type == TRIPLE_CLEAR:
+            score += 1800 * (level + 1)
+        elif event.type == TETRIS_CLEAR:
+            score += 2000 * (level + 1)
+        elif event.type == SOFT_DROP_LINE:
+            score += 1
+        elif event.type == HARD_DROP_LINE:
+            score += 2
+        elif event.type == LINE:
+            lines += 1
+            level = math.floor(lines / 10)
+            drop_speed = speeds[level] / 60 * 1000
 
-    # DRAW
-    # draw the grid
-    game.draw()
+    if soft_drop and config['handling']['SDF'] == 0:
+        game.drop_soft()
 
-    # every second drop
+    # drop according to drop_speed
     if last_dt >= drop_speed:
+       if soft_drop:
+           score += 1
        game.fall()
        last_dt = 0
 
-    # draw nexts
-    #for row in range(14):
-    #    for cell in range(4):
-    #        if game.next_grid[row][cell] > 0:
-    #            screen.blit(piece_sprites[game.next_grid[row][cell]], (cell*30+750, row*30+105))
+    if das_time > config["handling"]["DAS"] and not moving_left and not moving_right:
+        if last_down == 1:
+            if config["handling"]["ARR"] > 0:
+                moving_left = True
+            else:
+                for i in range(10):
+                    game.left()
+        elif last_down == 2:
+            if config["handling"]["ARR"] > 0:
+                moving_right = True
+            else:
+                for i in range(10):
+                    game.right()
+    
+    if arr_time > config["handling"]["ARR"]:
+        arr_time = 0
+        if moving_left:
+            game.left()
+        if moving_right:
+            game.right()
+
+    # lock piece if over lock delay
+    if lock_delay >= 500:
+        game.lock_piece()
+        held = 0
+        das_time = config["handling"]["DAS"] - config["handling"]["DCD"]
+        move_reset = 0
+        lock_delay = 0
+    # if over move reset and cant fall lock right away
+    elif move_reset == 15 and not game.can_fall():
+        game.lock_piece()
+        held = 0
+        das_time = config["handling"]["DAS"] - config["handling"]["DCD"]
+        move_reset = 0
+        lock_delay = 0
 
     # title text
     screen.blit(next_text, (750, 40))
@@ -148,7 +278,10 @@ while running:
     score_rect = score_text.get_rect()
     score_rect.center = (500, 750)
     screen.blit(score_text, score_rect)
-    
+
+    # DRAW
+    # draw the grid
+    game.draw()
 
     # check if fps counter is turned on
     if config["fps_counter"]:

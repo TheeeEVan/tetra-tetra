@@ -1,5 +1,6 @@
 import pygame
 import random
+from events import *
 
 class Game:
     def __init__(self, screen):
@@ -18,7 +19,7 @@ class Game:
         # load sprites
         self.grid_sprite = pygame.image.load("assets/grid.png")
         self.piece_sprites = [None, pygame.image.load("assets/pieces/cyan.png"), pygame.image.load("assets/pieces/yellow.png"), pygame.image.load("assets/pieces/purple.png"), pygame.image.load("assets/pieces/green.png"), pygame.image.load("assets/pieces/red.png"), pygame.image.load("assets/pieces/blue.png"), pygame.image.load("assets/pieces/orange.png"), ]
-
+        self.ghost_sprite = pygame.image.load("assets/pieces/ghost.png")
         
         # generate board
         self.board = []
@@ -123,6 +124,9 @@ class Game:
         self.current_rotation = 0
         self.temp_rotation = 0
 
+        # tspin detection stat
+        self.last_move_was_rotate = False
+
         # stores id of held piece
         self.hold_id = 0
     # draws the game
@@ -130,9 +134,7 @@ class Game:
         # draws grid
         self.screen.blit(self.grid_sprite, (350, 100))
 
-        # draw current piece
-        
-
+        # draw board pieces
         # every row below 22
         for row in range(22):
             # every cell
@@ -142,6 +144,13 @@ class Game:
                     # draw correct piece
                     self.screen.blit(self.piece_sprites[self.board[row][cell]], (cell*30+355, (19-row)*30+105))
 
+        # draw ghost
+        ghost_y = self.get_ghost()
+        for row in range(len(self.current_piece)):
+            for cell in range(len(self.current_piece[0])):
+                if self.current_piece[row][cell] > 0:
+                    self.screen.blit(self.ghost_sprite, ((cell + self.current_x)*30+355, (19-(ghost_y - row))*30+105))
+
         # draw falling piece
         for row in range(len(self.current_piece)):
             for cell in range(len(self.current_piece[0])):
@@ -149,6 +158,29 @@ class Game:
                     self.screen.blit(self.piece_sprites[self.current_id], ((cell + self.current_x)*30+355, (19-(self.current_y - row))*30+105))
 
         # draw next pieces
+        for piece in range(5):
+            if self.next_pieces[piece] == 1:
+                for row in range(3):
+                    for cell in range(4):
+                        if self.pieces[self.next_pieces[piece] - 1][row][cell] > 0:
+                            self.screen.blit(self.piece_sprites[self.next_pieces[piece]], (cell*30+750, piece*100+row*30+105))
+            elif self.next_pieces[piece] == 2:
+                for row in range(2):
+                    for cell in range(3):
+                        if self.pieces[self.next_pieces[piece] - 1][row][cell] > 0:
+                            self.screen.blit(self.piece_sprites[self.next_pieces[piece]], (cell*30+750, piece*100+row*30+105))
+            else:
+                for row in range(3):
+                    for cell in range(3):
+                        if self.pieces[self.next_pieces[piece] - 1][row][cell] > 0:
+                            self.screen.blit(self.piece_sprites[self.next_pieces[piece]], (cell*30+750, piece*100+row*30+105))
+
+        # draw held piece
+        if self.hold_id > 0:
+            for row in range(len(self.pieces[self.hold_id - 1])):
+                for col in range(len(self.pieces[self.hold_id - 1][0])):
+                    if self.pieces[self.hold_id - 1][row][col] > 0:
+                        self.screen.blit(self.piece_sprites[self.hold_id], (col*30+200, row*30+105))
 
     # generates next piece bag
     def generate_bag(self):
@@ -166,6 +198,16 @@ class Game:
                         return False
         return True
     
+    def get_ghost(self):
+        ghost_y = self.current_y
+
+        while not self.intersecting(self.current_x, ghost_y):
+            ghost_y -= 1
+
+        ghost_y += 1
+
+        return ghost_y
+
     # spawns specified piece
     def spawn_piece(self, piece):
         if self.can_spawn(piece):
@@ -190,6 +232,14 @@ class Game:
 
     # add piece to board to lock in place
     def lock_piece(self):
+        # detect tspin
+        tspin = False
+    
+        # ensure it's a T, ensure rotated last, ensure locked
+        if self.current_id == 3 and self.last_move_was_rotate and not self.can_fall() and self.intersecting(self.current_x + 1, self.current_y) and self.intersecting(self.current_x - 1, self.current_y):
+            if sum([self.board[self.current_y][self.current_x] > 0, self.board[self.current_y - 2][self.current_x] > 0, self.board[self.current_y][self.current_x + 2] > 0, self.board[self.current_y - 2][self.current_x + 2] > 0]) >= 3:
+                tspin = True
+
         # go through all parts of the piece
         for y in range(len(self.current_piece)):
             for x in range(len(self.current_piece[y])):
@@ -198,12 +248,44 @@ class Game:
                     # add to board using current id
                     self.board[self.current_y - y][self.current_x + x] = self.current_id
         
+        lines = 0
+
         # clear lines
         for line in range(39, -1, -1):
             if 0 not in self.board[line]:
+                lines += 1
+                pygame.event.post(EVENT_LINE)
                 for i in range(line, 39):
                     self.board[i] = self.board[i + 1]
                     self.board[i + 1] = [0,0,0,0,0,0,0,0,0,0]
+
+        # send proper event
+        if lines == 1 and self.board[0] == [0,0,0,0,0,0,0,0,0,0]:
+            pygame.event.post(EVENT_SINGLE_CLEAR)
+        elif lines == 2 and self.board[0] == [0,0,0,0,0,0,0,0,0,0]:
+            pygame.event.post(EVENT_DOUBLE_CLEAR)
+        elif lines == 3 and self.board[0] == [0,0,0,0,0,0,0,0,0,0]:
+            pygame.event.post(EVENT_TRIPLE_CLEAR)
+        elif lines == 4 and self.board[0] == [0,0,0,0,0,0,0,0,0,0]:
+            pygame.event.post(EVENT_TETRIS_CLEAR)
+        elif lines == 1 and tspin:
+            pygame.event.post(EVENT_SINGLE_SPIN)
+        elif lines == 2 and tspin:
+            pygame.event.post(EVENT_DOUBLE_SPIN)
+        elif lines == 3 and tspin:
+            pygame.event.post(EVENT_TRIPLE_SPIN)
+        elif lines == 1:
+            pygame.event.post(EVENT_SINGLE_LINE)
+        elif lines == 2:
+            pygame.event.post(EVENT_DOUBLE_LINE)
+        elif lines == 3:
+            pygame.event.post(EVENT_TRIPLE_LINE)
+        elif lines == 4:
+            pygame.event.post(EVENT_TETRIS_LINE)
+        elif tspin:
+            pygame.event.post(EVENT_SPIN)
+
+        self.spawn_piece(self.next_pieces.pop(0))
 
     # returns bool stating whether the current piece can fall again
     def can_fall(self):
@@ -221,17 +303,21 @@ class Game:
     def fall(self):
         if self.can_fall():
             self.current_y -= 1
-        else:
-            self.lock_piece()
-            self.spawn_piece(self.next_pieces.pop(0))
     
     # drops a piece instantly
     def drop(self):
         # continue falling until piece hits something and lock
         while self.can_fall():
+            pygame.event.post(EVENT_HARD_DROP_LINE)
             self.fall()
         self.lock_piece()
-        self.spawn_piece(self.next_pieces.pop(0))
+
+    # drops a piece instantly
+    def drop_soft(self):
+        # continue falling until piece hits something and lock
+        while self.can_fall():
+            pygame.event.post(EVENT_SOFT_DROP_LINE)
+            self.fall()
     
     # move piece one left
     def left(self):
@@ -242,6 +328,7 @@ class Game:
                     # check if there is blocks below it or if it is at the bottom of the board
                     if self.board[self.current_y - y][self.current_x + x - 1] > 0 or self.current_x + x < 1:
                         return
+        self.last_move_was_rotate = False
         self.current_x -= 1
                     
     # move piece one left
@@ -256,6 +343,7 @@ class Game:
                             return
                     except:
                         return
+        self.last_move_was_rotate = False
         self.current_x += 1
 
     def intersecting(self, temp_x, temp_y):
@@ -292,6 +380,7 @@ class Game:
                             self.current_x += mod_x
                             self.current_y += mod_y
                             self.current_rotation = self.temp_rotation
+                            self.last_move_was_rotate = True
                             return True
                 else:
                     for mods in self.kick_table['90']['non-I'][(self.current_rotation, self.temp_rotation)]:
@@ -301,6 +390,7 @@ class Game:
                             self.current_x += mod_x
                             self.current_y += mod_y
                             self.current_rotation = self.temp_rotation
+                            self.last_move_was_rotate = True
                             return True
             else:
                 for mods in self.kick_table['180'][(self.current_rotation, self.temp_rotation)]:
@@ -310,9 +400,11 @@ class Game:
                         self.current_x += mod_x
                         self.current_y += mod_y
                         self.current_rotation = self.temp_rotation
+                        self.last_move_was_rotate = True
                         return True
         else:
             self.current_rotation = self.temp_rotation
+            self.last_move_was_rotate = True
             return True
 
     # rotate clockwise
