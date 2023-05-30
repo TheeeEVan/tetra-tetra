@@ -75,9 +75,10 @@ if __name__ == "__main__":
         print(chalk.bold("(2) ") + red("40 Lines", bold=True) + " - Highscore: " + str(config["user"]["lines_highscore"]) + 's')
         print(chalk.bold("(3) ") + magenta("Zen", bold=True) + " - Highscore: Level " + str(config["user"]["zen_highscore"]))
         print(chalk.bold("(4) ") + white("Settings", bold=True))
+        print(chalk.bold("(5) ") + "Exit")
         choice = input("? ")
         if choice.isnumeric():
-            if int(choice) > 0 and int(choice) < 5:
+            if int(choice) > 0 and int(choice) < 6:
                 if int(choice) == 1:
                     score = tetris.tetris(config["game"], 0)
                     if score > config['user']['blitz_highscore']:
@@ -92,6 +93,8 @@ if __name__ == "__main__":
                         config['user']['zen_highscore'] = level
                 elif int(choice) == 4:
                     settings.settings()
+                elif int(choice) == 5:
+                    running = False
             config_raw = json.dumps(config)
             config_file = open("config.json", "w")
             config_file.write(config_raw)
