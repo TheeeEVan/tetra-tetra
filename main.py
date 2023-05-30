@@ -1,9 +1,9 @@
 import tetris
+import settings
 import chalk
 import pygame
 import os
 import json
-import time
 
 pygame.init()
 
@@ -76,19 +76,22 @@ if __name__ == "__main__":
         print(chalk.bold("(3) ") + magenta("Zen", bold=True) + " - Highscore: Level " + str(config["user"]["zen_highscore"]))
         print(chalk.bold("(4) ") + white("Settings", bold=True))
         choice = input("? ")
-        time.sleep(1)
         if choice.isnumeric():
             if int(choice) > 0 and int(choice) < 5:
                 if int(choice) == 1:
                     score = tetris.tetris(config["game"], 0)
                     if score > config['user']['blitz_highscore']:
                         config['user']['blitz_highscore'] = score
-                if int(choice) == 2:
+                elif int(choice) == 2:
                     lines_time = tetris.tetris(config["game"], 1)
                     if lines_time != 0 and (lines_time < config['user']['lines_highscore'] or config['user']['lines_highscore'] == 0):
                         config['user']['lines_highscore'] = lines_time
-                if int(choice) == 3:
-                    tetris.tetris(config["game"], 2)
+                elif int(choice) == 3:
+                    level = tetris.tetris(config["game"], 2)
+                    if level > config['user']['zen_highscore']:
+                        config['user']['zen_highscore'] = level
+                elif int(choice) == 4:
+                    settings.settings()
             config_raw = json.dumps(config)
             config_file = open("config.json", "w")
             config_file.write(config_raw)
