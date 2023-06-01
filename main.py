@@ -63,12 +63,12 @@ if __name__ == "__main__":
     while running:
         clear()
         print(chalk.blue('''  
-  _______ ______ _______ _____  _____  _____ 
- |__   __|  ____|__   __|  __ \|_   _|/ ____|
-    | |  | |__     | |  | |__) | | | | (___  
-    | |  |  __|    | |  |  _  /  | |  \___ \ 
-    | |  | |____   | |  | | \ \ _| |_ ____) |
-    |_|  |______|  |_|  |_|  \_\_____|_____/\n\n'''))
+  _______ ______ _______ _____              _______ ______ _______ _____            
+ |__   __|  ____|__   __|  __ \     /\     |__   __|  ____|__   __|  __ \     /\    
+    | |  | |__     | |  | |__) |   /  \       | |  | |__     | |  | |__) |   /  \   
+    | |  |  __|    | |  |  _  /   / /\ \      | |  |  __|    | |  |  _  /   / /\ \  
+    | |  | |____   | |  | | \ \  / ____ \     | |  | |____   | |  | | \ \  / ____ \ 
+    |_|  |______|  |_|  |_|  \_\/_/    \_\    |_|  |______|  |_|  |_|  \_\/_/    \_\\\n'''))
         
         print(chalk.bold(f"WELCOME!"))
         print(chalk.bold("(1) ") + yellow("Blitz", bold=True) + " - Highscore: " + str(config["user"]["blitz_highscore"]))
@@ -93,6 +93,10 @@ if __name__ == "__main__":
                         config['user']['zen_highscore'] = level
                 elif int(choice) == 4:
                     settings.settings()
+                    config_file = open("config.json", "r")
+                    config_raw = config_file.read()
+                    config = json.loads(config_raw)
+                    config_file.close()
                 elif int(choice) == 5:
                     running = False
             config_raw = json.dumps(config)

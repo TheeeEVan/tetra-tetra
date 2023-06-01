@@ -37,6 +37,9 @@ def tetris(config, mode):
 
     # setup screen
     screen = pygame.display.set_mode((config["screen_width"], config["screen_height"]))
+    pygame.display.set_caption("Tetra Tetra")
+    icon = pygame.image.load("assets/icon.png")
+    pygame.display.set_icon(icon)
     # clock
     clock = pygame.time.Clock()
     # timers
@@ -292,6 +295,9 @@ def tetris(config, mode):
         # DRAW
         # draw the grid
         game.draw()
+
+        if mode == 0 and time_running > 120000:
+            running = False
 
         if mode == 1 and score >= 40:
             running = False
