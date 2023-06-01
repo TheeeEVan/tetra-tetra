@@ -1,3 +1,5 @@
+# keeps track of the board and handles the result of most input
+
 import pygame
 import random
 from events import *
@@ -13,7 +15,7 @@ class Game:
         # 6 - J - blue
         # 7 - L - orange
 
-        # get screen
+        # keep the screen idk :(
         self.screen = screen
 
         # load sprites
@@ -23,7 +25,6 @@ class Game:
         
         # generate board
         self.board = []
-
         for i in range(40):
             self.board.append([])
             for j in range(10):
@@ -131,9 +132,10 @@ class Game:
         self.hold_id = 0
     # draws the game
     def draw(self):
-        # draws grid
+        # draws grid sprite
         self.screen.blit(self.grid_sprite, (350, 100))
 
+        # this is some scary code im not too sure what ive made but it works
         # draw board pieces
         # every row below 22
         for row in range(22):
@@ -141,7 +143,7 @@ class Game:
             for cell in range(10):
                 # if not empty
                 if self.board[row][cell] > 0:
-                    # draw correct piece
+                    # draw correct piece and in the right spot
                     self.screen.blit(self.piece_sprites[self.board[row][cell]], (cell*30+355, (19-row)*30+105))
 
         # draw ghost
@@ -159,16 +161,19 @@ class Game:
 
         # draw next pieces
         for piece in range(5):
+            # the I piece fits weird so i have to do it differently
             if self.next_pieces[piece] == 1:
                 for row in range(3):
                     for cell in range(4):
                         if self.pieces[self.next_pieces[piece] - 1][row][cell] > 0:
                             self.screen.blit(self.piece_sprites[self.next_pieces[piece]], (cell*30+750, piece*100+row*30+105))
+            # same with square
             elif self.next_pieces[piece] == 2:
                 for row in range(2):
                     for cell in range(3):
                         if self.pieces[self.next_pieces[piece] - 1][row][cell] > 0:
                             self.screen.blit(self.piece_sprites[self.next_pieces[piece]], (cell*30+750, piece*100+row*30+105))
+            # all the other normal pieces
             else:
                 for row in range(3):
                     for cell in range(3):
@@ -183,30 +188,40 @@ class Game:
                         self.screen.blit(self.piece_sprites[self.hold_id], (col*30+200, row*30+105))
 
     # generates next piece bag
+    # no one believes this is how it works: https://tetris.fandom.com/wiki/Random_Generator
     def generate_bag(self):
+        # this is the bag
         pieces = [1, 2, 3, 4, 5, 6, 7]
+        # shuffle the bag
         random.shuffle(pieces)
+        # return the bag
         return pieces
     
+    # just check if a piece can spawn
     def can_spawn(self, piece):
+        # get the piece we need to sapwn
         test_piece = self.pieces[piece - 1]
 
+        # loop through the piece and see if any square it needs to spawn is occupied
         for y in range(len(test_piece)):
             for x in range(len(test_piece[y])):
                 if test_piece[y][x] > 0:
+                    # if it is occupied just return false
                     if self.board[21- y][3 + x] != 0:
                         return False
         return True
     
+    # finds where the ghost should be
     def get_ghost(self):
+        # ghost y is the height the ghost is rendered at
         ghost_y = self.current_y
 
+        # just keep moving the ghost down until it hits something
         while not self.intersecting(self.current_x, ghost_y):
             ghost_y -= 1
 
-        ghost_y += 1
-
-        return ghost_y
+        # return ghost y (add 1 cause it hit something on the last sutraction)
+        return ghost_y + 1
 
     # spawns specified piece
     def spawn_piece(self, piece):
@@ -258,7 +273,7 @@ class Game:
                     self.board[i] = self.board[i + 1]
                     self.board[i + 1] = [0,0,0,0,0,0,0,0,0,0]
 
-        # send proper event
+        # send proper event based on what happened
         if lines == 1 and self.board[0] == [0,0,0,0,0,0,0,0,0,0]:
             pygame.event.post(EVENT_SINGLE_CLEAR)
         elif lines == 2 and self.board[0] == [0,0,0,0,0,0,0,0,0,0]:
@@ -284,6 +299,7 @@ class Game:
         elif tspin:
             pygame.event.post(EVENT_SPIN)
 
+        # now that line is gone send the next piece
         self.spawn_piece(self.next_pieces.pop(0))
 
     # returns bool stating whether the current piece can fall again
@@ -367,20 +383,31 @@ class Game:
         return False
     
     # wall kicks
-    # rotation - 0 = 90 - 1 = 180
+    # rotations: 0 = 90 | 1 = 180
     def valid_rotate(self, rotation):
+        # check if normal rotation worked
         if self.intersecting(self.current_x, self.current_y):
+            # if normal rotation didn't work then we have to try wallkicks
+            # some pieces have special wall kicks
+            # 90 degreee rotations
             if rotation == 0:
+                # I piece
                 if self.current_id == 1:
+                    # (im only commenting this one cause all cases are the same just different kicks to loop through)
+                    # loop through all possible wallkicks based on rotation amount, piece, and orignal and desired rotation positions
                     for mods in self.kick_table['90']['I'][(self.current_rotation, self.temp_rotation)]:
+                        # set x and y respectivly
                         mod_x, mod_y = mods
 
+                        # check if these wallkicks work
                         if not self.intersecting(self.current_x + mod_x, self.current_y + mod_y):
+                            # if they do we will put them in place by changing the current x and y
                             self.current_x += mod_x
                             self.current_y += mod_y
                             self.current_rotation = self.temp_rotation
                             self.last_move_was_rotate = True
                             return True
+                # all the other pieces
                 else:
                     for mods in self.kick_table['90']['non-I'][(self.current_rotation, self.temp_rotation)]:
                         mod_x, mod_y = mods
@@ -391,6 +418,7 @@ class Game:
                             self.current_rotation = self.temp_rotation
                             self.last_move_was_rotate = True
                             return True
+            # 180 rotations
             else:
                 for mods in self.kick_table['180'][(self.current_rotation, self.temp_rotation)]:
                     mod_x, mod_y = mods
@@ -402,38 +430,49 @@ class Game:
                         self.last_move_was_rotate = True
                         return True
         else:
+            # if normal rotation worked then set that as the rotation
             self.current_rotation = self.temp_rotation
             self.last_move_was_rotate = True
             return True
 
     # rotate clockwise
     def rotate_cw(self):
+        # add to rotation position
         self.temp_rotation = self.current_rotation + 1
 
+        # make sure we dont add too much
         if self.temp_rotation == 4:
             self.temp_rotation = 0
 
-        # squares dont rotate and i did some weird stuff with squares
+        # squares are weird they will break but they dont rotate
         if self.current_id != 2:
+            # rotate it doing weird grid stuff i figured out
+            # pretty much i loop through the grid in different orders which causes it to flip
             temp_piece = []
             for i in range(len(self.current_piece[0])):
                 temp_piece.append([])
                 for j in range(len(self.current_piece) - 1, -1, -1):
                     temp_piece[i].append(self.current_piece[j][i])
             self.current_piece = temp_piece
-        
+
+            # make sure its a valid rotation (this will check and perform wallkicks too cause i made it very smart!!!)
             if not self.valid_rotate(0):
+                # undo it by going backwards if it doesnt work
                 self.rotate_ccw()
 
     # rotate counter clockwise
     def rotate_ccw(self):
+        # takeaway from rotation position cause we going backwards
         self.temp_rotation = self.current_rotation - 1
 
+        # dont takeaway too much
         if self.temp_rotation == -1:
             self.temp_rotation = 3
 
-        # squares dont rotate and i did some weird stuff with squares
+        # squares are weird they will break but they dont rotate
         if self.current_id != 2:
+            # rotate it doing weird grid stuff i figured out
+            # pretty much i loop through the grid in different orders which causes it to flip
             temp_piece = []
             for i in range(len(self.current_piece[0]) - 1, -1, -1):
                 temp_row = []
@@ -442,35 +481,50 @@ class Game:
                 temp_piece.append(temp_row)
             self.current_piece = temp_piece
 
+            # make sure its a valid rotation (this will check and perform wallkicks too cause i made it very smart!!!)
             if not self.valid_rotate(0):
+                # undo it by going backwards if it doesnt work
                 self.rotate_cw()
 
     # rotate 180
     def rotate_180(self):
+        # add to our rotation position
         self.temp_rotation = self.current_rotation + 2
 
+        # make sure rotation number doesnt go below 0 or above 3
         if self.temp_rotation == 4:
             self.temp_rotation = 0
         elif self.temp_rotation == 5:
             self.temp_rotation = 1
 
+        # squares are weird they will break but they dont rotate
         if self.current_id != 2:
+            # rotate it doing weird grid stuff i figured out
+            # pretty much i loop through the grid in different orders which causes it to flip
             temp_piece = []
             for i in range(len(self.current_piece) - 1, -1, -1):
                 temp_row = []
                 for j in range(len(self.current_piece) - 1, -1, -1):
                     temp_row.append(self.current_piece[i][j])
                 temp_piece.append(temp_row)
+            # new rotated piece is set to the current piece orientation
             self.current_piece = temp_piece
 
+        # make sure its a valid rotation (this will check and perform wallkicks too cause i made it very smart!!!)
         if not self.valid_rotate(1):
+            # if it dont work just undo it by doing it again yk
             self.rotate_180()
 
+    # holds current piece
     def hold_piece(self):
+        # the new piece to spawn is whats being held rn
         new_piece = self.hold_id
+        # the piece to be held
         self.hold_id = self.current_id
+        # if hold piece exists spawn it
         if new_piece > 0:
             self.spawn_piece(new_piece)
+        # if hold doesnt exist yet spawn next piece
         else:
             self.spawn_piece(self.next_pieces.pop(0))
 

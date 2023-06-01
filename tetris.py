@@ -1,7 +1,9 @@
+# handles all IO and UI as well as score and timing
+
 import pygame
 import math
 from events import *
-from game import Game
+from gamehandler import Game
 from enum import Enum
 
 
