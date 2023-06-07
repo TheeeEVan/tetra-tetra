@@ -4,8 +4,6 @@ import pygame
 import math
 from events import *
 from gamehandler import Game
-from enum import Enum
-
 
 def tetris(config, mode):
     # init

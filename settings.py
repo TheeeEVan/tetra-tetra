@@ -4,13 +4,15 @@ import json
 
 pygame.init()
 
-font = pygame.font.Font("assets/fonts/Rubik-VariableFont_wght.ttf", 20)
+# font
+font = pygame.font.Font("assets/fonts/VT323-Regular.ttf", 20)
 press_a_key = font.render("Press any Key...", True, (255, 255, 255))
 press_a_key_rect = press_a_key.get_rect()
 press_a_key_rect.center = (100, 10)
 
 def settings():
 
+    # changes specified control
     def change_control(name):
         screen = pygame.display.set_mode((200, 25))
         running = True
@@ -26,6 +28,7 @@ def settings():
         pygame.display.quit()
         update_all()
     
+    # updates all values in the temp config
     def update_all():
         left_key.set(pygame.key.name(config_new["game"]["controls"]["left"]))
         right_key.set(pygame.key.name(config_new["game"]["controls"]["right"]))
@@ -41,11 +44,13 @@ def settings():
         config_new["game"]["handling"]["SDF"] = sdf_value.get()
         config_new["game"]["fps_counter"] = fps_value.get()
 
+    # sets all highscores to 0
     def reset_scores():
         config_new["user"]["blitz_highscore"] = 0
         config_new["user"]["lines_highscore"] = 0
         config_new["user"]["zen_highscore"] = 0
 
+    # writes new config and closes window
     def apply():
         config_raw = json.dumps(config_new)
         config_file = open("config.json", "w")
@@ -151,11 +156,13 @@ def settings():
     # -- OTHER -- 
     handling_header = Label(mainframe, text="Other", font=("Arial", 15)).grid(row=16,column=0,sticky=(N,W))
 
+    # fps counter
     fps_label = Label(mainframe, text="Show FPS", font=("Arial", 11)).grid(row=17, column=0, sticky=(S,W))
     fps_value = BooleanVar()
     fps_value.set(config_new["game"]["fps_counter"])
     fps_check = Checkbutton(mainframe, variable=fps_value, command=update_all).grid(row=17, column=1, sticky=(N,W))
 
+    # reset highscores
     reset_label = Label(mainframe, text="Reset Highscores", font=("Arial", 11)).grid(row=18, column=0, sticky=(S,W))
     reset_button = Button(mainframe, text="Click Me", width=10, command=reset_scores).grid(row=18, column=1, sticky=(W))
 

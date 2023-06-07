@@ -5,8 +5,10 @@ import pygame
 import os
 import json
 
+# init pygame
 pygame.init()
 
+# the 
 default_config = {
     "game": {
         "screen_width": 1000,
