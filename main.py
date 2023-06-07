@@ -38,16 +38,19 @@ default_config = {
     }
 }
 
+# set colors
 red = chalk.Chalk("red")
 yellow = chalk.Chalk("yellow")
 magenta = chalk.Chalk("magenta")
 white = chalk.Chalk("white")
 
+# check for config 
 if not os.path.isfile("./config.json"):
     config_file = open("config.json", "w")
     config_file.write(json.dumps(default_config))
     config_file.close()
     
+# load config
 config_file = open("config.json", "r")
 config_raw = config_file.read()
 config = json.loads(config_raw)
@@ -64,6 +67,7 @@ if __name__ == "__main__":
     running = True
     while running:
         clear()
+        # title
         print(chalk.blue('''  
   _______ ______ _______ _____              _______ ______ _______ _____            
  |__   __|  ____|__   __|  __ \     /\     |__   __|  ____|__   __|  __ \     /\    
@@ -78,29 +82,36 @@ if __name__ == "__main__":
         print(chalk.bold("(3) ") + magenta("Zen", bold=True) + " - Highscore: Level " + str(config["user"]["zen_highscore"]))
         print(chalk.bold("(4) ") + white("Settings", bold=True))
         print(chalk.bold("(5) ") + "Exit")
+        # get input
         choice = input("? ")
         if choice.isnumeric():
             if int(choice) > 0 and int(choice) < 6:
+                # BLITZ
                 if int(choice) == 1:
                     score = tetris.tetris(config["game"], 0)
                     if score > config['user']['blitz_highscore']:
                         config['user']['blitz_highscore'] = score
+                # 40 LINES
                 elif int(choice) == 2:
                     lines_time = tetris.tetris(config["game"], 1)
                     if lines_time != 0 and (lines_time < config['user']['lines_highscore'] or config['user']['lines_highscore'] == 0):
                         config['user']['lines_highscore'] = lines_time
+                # ZEN
                 elif int(choice) == 3:
                     level = tetris.tetris(config["game"], 2)
                     if level > config['user']['zen_highscore']:
                         config['user']['zen_highscore'] = level
+                # open settings
                 elif int(choice) == 4:
                     settings.settings()
                     config_file = open("config.json", "r")
                     config_raw = config_file.read()
                     config = json.loads(config_raw)
                     config_file.close()
+                # exit
                 elif int(choice) == 5:
                     running = False
+            # always update conifg
             config_raw = json.dumps(config)
             config_file = open("config.json", "w")
             config_file.write(config_raw)
