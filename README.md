@@ -19,8 +19,8 @@ Everything you need to get up and running.
 ```
 git clone https://github.com/TheeeEVan/tetra-tetra
 cd tetra-tetra
-pip install -r requirements.txt
-python main.py
+pip3 install -r requirements.txt
+python3 main.py
 ```
 
 ## Requirements
