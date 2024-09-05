@@ -2,9 +2,14 @@
 [![forthebadge](https://forthebadge.com/images/badges/made-with-python.svg)](https://forthebadge.com)
 [![forthebadge](https://forthebadge.com/images/badges/gluten-free.svg)](https://forthebadge.com)
 
-A modern Tetris clone using Python 3 and pygame. This serves as my Computer Science 20 final project.
+A modern Tetris clone using Python 3 and pygame.
 
 ![tetra-tetra gameplay](./assets/header.gif)
+
+This served as my Computer Science 20 (Grade 11) final project. We were tasked with making a project that demonstrated the use of:
+- Procedural Programming (Rotation Algorithms, Game Logic, etc.)
+- Data Structures (Board, Pieces, etc.)
+- Files and File Structures (Settings and High scores)
 
 ## Quick Start
 
