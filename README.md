@@ -1,6 +1,10 @@
 # Tetra Tetra
+[![forthebadge](https://forthebadge.com/images/badges/made-with-python.svg)](https://forthebadge.com)
+[![forthebadge](https://forthebadge.com/images/badges/gluten-free.svg)](https://forthebadge.com)
 
 A modern Tetris clone using Python 3 and pygame. This serves as my Computer Science 20 final project.
+
+![tetra-tetra gameplay](./assets/header.gif)
 
 ## Quick Start
 
