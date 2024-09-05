@@ -1,4 +1,3 @@
-# reference material
+# Reference Material
 
-just some images showing how the rotation system is supposed to work cause its a lot more than just rotating the piece
-yes all of this is in the game properly
+The images here showcase how the modern tetris rotation system works. These include many edge cases where a simple rotation would not work due to space limitations.
